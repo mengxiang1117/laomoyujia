@@ -90,7 +90,10 @@
    ```
    pip install -r requirements.txt
    ```
-3. 配置数据库连接信息（在.env文件中）cp env.example .env
+3. 配置数据库连接信息（在.env文件中）
+   ```
+   cp env.example .env
+   ```
 4. 创建数据库表（运行sql_connect.py）
 5. 优化数据库性能，建立索引（运行optimize_db.py）
 6. 启动Redis服务
