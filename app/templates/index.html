@@ -1,0 +1,865 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 提示信息模态框 -->
+<div id="toast" class="toast position-fixed top-50 start-50 translate-middle" role="alert" aria-live="assertive" aria-atomic="true" style="z-index: 1050; display: none;">
+    <div class="toast-body bg-success text-white text-center">
+        <span id="toast-message"></span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4">摸鱼设置</h2>
+        
+        <div class="row mb-4">
+            <!-- 工作详情设置方块 -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">工作详情设置</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="work-time-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="work_start_time" class="form-label">工作开始时间</label>
+                                    <input type="time" class="form-control" id="work_start_time" name="work_start_time">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="work_end_time" class="form-label">工作结束时间</label>
+                                    <input type="time" class="form-control" id="work_end_time" name="work_end_time">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="break_start_time" class="form-label">休息开始时间</label>
+                                    <input type="time" class="form-control" id="break_start_time" name="break_start_time">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="break_end_time" class="form-label">休息结束时间</label>
+                                    <input type="time" class="form-control" id="break_end_time" name="break_end_time">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="daily_salary" class="form-label">日薪</label>
+                                    <input type="number" class="form-control" id="daily_salary" name="daily_salary" step="0.01">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">保存设置</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 实时收益计算方块 -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">实时收益计算</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <h3 id="current-earnings">0.00 元</h3>
+                            <p id="earnings-status">当前未在工作时间内</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- 摸鱼记录方块 -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">摸鱼记录(单倍)</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="slacking-record-form">
+                            <div class="mb-3">
+                                <label for="slacking_duration" class="form-label">摸鱼时长(分钟)</label>
+                                <input type="number" class="form-control" id="slacking_duration" name="slacking_duration" min="1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="slacking_project" class="form-label">摸鱼项目</label>
+                                <input type="text" class="form-control" id="slacking_project" name="slacking_project">
+                            </div>
+                            <button type="submit" class="btn btn-success" style="background-color: #f81e06; border-color: #f81e06;">记录摸鱼</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 加班记录方块 -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">加班记录(三倍)</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="overtime-record-form">
+                            <div class="mb-3">
+                                <label for="overtime_duration" class="form-label">加班时长(分钟)</label>
+                                <input type="number" class="form-control" id="overtime_duration" name="overtime_duration" min="1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="overtime_project" class="form-label">加班项目</label>
+                                <input type="text" class="form-control" id="overtime_project" name="overtime_project">
+                            </div>
+                            <button type="submit" class="btn btn-success" style="background-color: #0e0d0d; border-color: #0e0d0d;">记录加班</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量存储用户工作信息
+    let userWorkInfo = {
+        work_start_time: null,
+        work_end_time: null,
+        break_start_time: null,
+        break_end_time: null,
+        daily_salary: 0
+    };
+    
+    // 加载用户工作信息
+    document.addEventListener('DOMContentLoaded', function() {
+        // 从本地存储加载收益数据
+        loadEarningsFromStorage();
+        
+        fetch('/api/user-work-info')
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    userWorkInfo.work_start_time = data.info.work_start_time || null;
+                    userWorkInfo.work_end_time = data.info.work_end_time || null;
+                    userWorkInfo.break_start_time = data.info.break_start_time || null;
+                    userWorkInfo.break_end_time = data.info.break_end_time || null;
+                    userWorkInfo.daily_salary = data.info.daily_salary || 0;
+                    
+                    document.getElementById('work_start_time').value = userWorkInfo.work_start_time;
+                    document.getElementById('work_end_time').value = userWorkInfo.work_end_time;
+                    document.getElementById('break_start_time').value = userWorkInfo.break_start_time;
+                    document.getElementById('break_end_time').value = userWorkInfo.break_end_time;
+                    document.getElementById('daily_salary').value = userWorkInfo.daily_salary;
+                }
+            });
+        
+        // 实时计算收益
+        setInterval(updateEarnings, 1000);
+    });
+    
+    // 全局变量存储累计收益
+    let accumulatedEarnings = 0;
+    let isOnBreak = false; // 添加一个标志来跟踪是否在休息状态
+    let lastSettings = {  // 记录上次的设置
+        work_start_time: null,
+        work_end_time: null,
+        daily_salary: 0
+    };
+    
+    // 从本地存储加载收益数据
+    function loadEarningsFromStorage() {
+        const savedData = localStorage.getItem('slackingEarningsData');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            accumulatedEarnings = data.accumulatedEarnings || 0;
+            lastSettings = data.lastSettings || { work_start_time: null, work_end_time: null, daily_salary: 0 };
+            // 检查数据是否过期（超过24小时）
+            const now = new Date().getTime();
+            if (now - data.timestamp > 24 * 60 * 60 * 1000) {
+                // 数据过期，重置收益
+                accumulatedEarnings = 0;
+                lastSettings = { work_start_time: null, work_end_time: null, daily_salary: 0 };
+                saveEarningsToStorage();
+            }
+        }
+    }
+    
+    // 保存收益数据到本地存储
+    function saveEarningsToStorage() {
+        const data = {
+            accumulatedEarnings: accumulatedEarnings,
+            lastSettings: lastSettings,
+            timestamp: new Date().getTime()
+        };
+        localStorage.setItem('slackingEarningsData', JSON.stringify(data));
+    }
+    
+    // 重置收益数据
+    function resetEarnings() {
+        accumulatedEarnings = 0;
+        // 更新最后设置为当前设置
+        lastSettings.work_start_time = userWorkInfo.work_start_time;
+        lastSettings.work_end_time = userWorkInfo.work_end_time;
+        lastSettings.daily_salary = userWorkInfo.daily_salary;
+        saveEarningsToStorage();
+    }
+    
+    // 实时收益计算函数（前端计算）
+    function updateEarnings() {
+        // 检查是否已设置工作信息
+        if (!userWorkInfo.work_start_time || !userWorkInfo.work_end_time || !userWorkInfo.daily_salary) {
+            document.getElementById('current-earnings').textContent = '0.00 元';
+            document.getElementById('earnings-status').textContent = '请先设置工作时间和日薪';
+            return;
+        }
+        
+        // 获取当前时间
+        const now = new Date();
+        const currentTime = now.toTimeString().substring(0, 5); // HH:MM格式
+        
+        // 解析工作时间
+        const workStartTime = userWorkInfo.work_start_time;
+        const workEndTime = userWorkInfo.work_end_time;
+        const breakStartTime = userWorkInfo.break_start_time;
+        const breakEndTime = userWorkInfo.break_end_time;
+        const dailySalary = parseFloat(userWorkInfo.daily_salary);
+        
+        // 判断当前是否在工作时间内
+        let isWorking = false;
+        
+        // 处理工作时间跨过午夜的情况
+        if (workStartTime <= workEndTime) {
+            // 正常情况：工作时间不跨过午夜
+            if (workStartTime <= currentTime && currentTime <= workEndTime) {
+                isWorking = true;
+            }
+        } else {
+            // 工作时间跨过午夜（例如从22:00到6:00）
+            if (currentTime >= workStartTime || currentTime <= workEndTime) {
+                isWorking = true;
+            }
+        }
+        
+        // 检查是否在休息时间内
+        let currentlyOnBreak = false;
+        if (isWorking && breakStartTime && breakEndTime) {
+            // 处理休息时间跨过午夜的情况
+            if (breakStartTime <= breakEndTime) {
+                // 正常情况：休息时间不跨过午夜
+                if (breakStartTime <= currentTime && currentTime <= breakEndTime) {
+                    currentlyOnBreak = true;
+                }
+            } else {
+                // 休息时间跨过午夜
+                if (currentTime >= breakStartTime || currentTime <= breakEndTime) {
+                    currentlyOnBreak = true;
+                }
+            }
+        }
+        
+        // 如果正在工作中且不在休息时间，计算并更新收益
+        if (isWorking && !currentlyOnBreak) {
+            // 计算总的有效工作时间(秒)
+            let totalWorkDuration = 0;
+            
+            // 如果工作时间跨过午夜
+            if (workStartTime > workEndTime) {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endTomorrow = new Date();
+                endTomorrow.setDate(endTomorrow.getDate() + 1);
+                endTomorrow.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endTomorrow - startToday) / 1000;
+            } else {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endToday = new Date();
+                endToday.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endToday - startToday) / 1000;
+            }
+            
+            // 减去休息时间
+            if (breakStartTime && breakEndTime) {
+                let breakDuration = 0;
+                
+                // 如果休息时间也跨过午夜
+                if (breakStartTime > breakEndTime) {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndTomorrow = new Date();
+                    breakEndTomorrow.setDate(breakEndTomorrow.getDate() + 1);
+                    breakEndTomorrow.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndTomorrow - breakStartToday) / 1000;
+                } else {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndToday = new Date();
+                    breakEndToday.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndToday - breakStartToday) / 1000;
+                }
+                
+                totalWorkDuration -= breakDuration;
+            }
+            
+            // 计算每秒收益
+            const earningsPerSecond = totalWorkDuration > 0 ? dailySalary / totalWorkDuration : 0;
+            
+            // 计算从工作开始到现在实际工作的时间(秒)
+            let actualWorkedSeconds = 0;
+            
+            // 计算今天已工作的总时间(包括休息时间)
+            if (workStartTime > workEndTime) {
+                // 工作时间跨过午夜
+                const workStartToday = new Date();
+                workStartToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                if (currentTime >= workStartTime) {
+                    // 当前时间在工作开始时间之后（今天）
+                    actualWorkedSeconds = (now - workStartToday) / 1000;
+                } else {
+                    // 当前时间在午夜之后，工作开始时间在午夜之前（昨天）
+                    workStartToday.setDate(workStartToday.getDate() - 1);
+                    actualWorkedSeconds = (now - workStartToday) / 1000;
+                }
+            } else {
+                // 正常情况：工作时间不跨过午夜
+                const workStartToday = new Date();
+                workStartToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                if (currentTime >= workStartTime) {
+                    actualWorkedSeconds = (now - workStartToday) / 1000;
+                }
+            }
+            
+            // 减去休息时间
+            if (breakStartTime && breakEndTime) {
+                // 处理休息时间跨过午夜的情况
+                if (breakStartTime > breakEndTime) {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndTomorrow = new Date();
+                    breakEndTomorrow.setDate(breakEndTomorrow.getDate() + 1);
+                    breakEndTomorrow.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    // 如果当前时间在午夜之后，且休息开始时间在午夜之前
+                    if (currentTime < breakEndTime) {
+                        const nowBreakTime = new Date();
+                        nowBreakTime.setDate(nowBreakTime.getDate() + 1);
+                        nowBreakTime.setHours(parseInt(currentTime.split(':')[0]), parseInt(currentTime.split(':')[1]), 0, 0);
+                        
+                        if (breakStartToday <= nowBreakTime && nowBreakTime <= breakEndTomorrow) {
+                            // 正在休息中
+                            const breakDuration = (nowBreakTime - breakStartToday) / 1000;
+                            actualWorkedSeconds = Math.max(0, actualWorkedSeconds - breakDuration);
+                        }
+                    } else if (breakStartTime <= currentTime) {
+                        // 当前时间在休息开始时间之后
+                        const nowBreakTime = new Date();
+                        nowBreakTime.setHours(parseInt(currentTime.split(':')[0]), parseInt(currentTime.split(':')[1]), 0, 0);
+                        
+                        if (breakStartToday <= nowBreakTime) {
+                            if (currentTime <= breakEndTime) {
+                                // 还没到休息结束时间
+                                const breakDuration = (nowBreakTime - breakStartToday) / 1000;
+                                actualWorkedSeconds = Math.max(0, actualWorkedSeconds - breakDuration);
+                            } else {
+                                // 已经过了休息时间
+                                const breakDuration = (breakEndTomorrow - breakStartToday) / 1000;
+                                actualWorkedSeconds = Math.max(0, actualWorkedSeconds - breakDuration);
+                            }
+                        }
+                    }
+                } else {
+                    // 正常情况：休息时间不跨过午夜
+                    const nowBreakTime = new Date();
+                    nowBreakTime.setHours(parseInt(currentTime.split(':')[0]), parseInt(currentTime.split(':')[1]), 0, 0);
+                    
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndToday = new Date();
+                    breakEndToday.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    if (breakStartTime <= currentTime && currentTime <= breakEndTime) {
+                        // 正在休息中
+                        const breakDuration = (nowBreakTime - breakStartToday) / 1000;
+                        actualWorkedSeconds = Math.max(0, actualWorkedSeconds - breakDuration);
+                    } else if (currentTime > breakEndTime) {
+                        // 已经过了休息时间
+                        const breakDuration = (breakEndToday - breakStartToday) / 1000;
+                        actualWorkedSeconds = Math.max(0, actualWorkedSeconds - breakDuration);
+                    }
+                }
+            }
+            
+            // 计算应该获得的收益
+            const currentEarnings = actualWorkedSeconds * earningsPerSecond;
+            
+            // 确保收益不会超过日薪
+            accumulatedEarnings = Math.min(currentEarnings, dailySalary);
+            
+            document.getElementById('current-earnings').textContent = accumulatedEarnings.toFixed(2) + ' 元';
+            document.getElementById('earnings-status').textContent = '正在工作中...';
+            
+            // 更新休息状态标志
+            isOnBreak = false;
+            
+            // 保存收益数据到本地存储
+            saveEarningsToStorage();
+        } else if (currentlyOnBreak) {
+            // 在休息时间，计算到目前为止应该获得的收益
+            // 计算总的有效工作时间(秒)
+            let totalWorkDuration = 0;
+            
+            // 如果工作时间跨过午夜
+            if (workStartTime > workEndTime) {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endTomorrow = new Date();
+                endTomorrow.setDate(endTomorrow.getDate() + 1);
+                endTomorrow.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endTomorrow - startToday) / 1000;
+            } else {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endToday = new Date();
+                endToday.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endToday - startToday) / 1000;
+            }
+            
+            // 减去休息时间
+            if (breakStartTime && breakEndTime) {
+                let breakDuration = 0;
+                
+                // 如果休息时间也跨过午夜
+                if (breakStartTime > breakEndTime) {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndTomorrow = new Date();
+                    breakEndTomorrow.setDate(breakEndTomorrow.getDate() + 1);
+                    breakEndTomorrow.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndTomorrow - breakStartToday) / 1000;
+                } else {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndToday = new Date();
+                    breakEndToday.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndToday - breakStartToday) / 1000;
+                }
+                
+                totalWorkDuration -= breakDuration;
+            }
+            
+            // 计算每秒收益
+            const earningsPerSecond = totalWorkDuration > 0 ? dailySalary / totalWorkDuration : 0;
+            
+            // 计算到目前为止实际工作的时间(秒)
+            let actualWorkedSeconds = 0;
+            
+            // 计算从工作开始到休息开始的时间
+            if (workStartTime > workEndTime) {
+                // 工作时间跨过午夜
+                const workStartToday = new Date();
+                workStartToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const breakStartToday = new Date();
+                breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                
+                // 如果休息开始时间在午夜之后，工作开始时间在午夜之前
+                if (breakStartTime < workStartTime) {
+                    breakStartToday.setDate(breakStartToday.getDate() + 1);
+                }
+                
+                actualWorkedSeconds = (breakStartToday - workStartToday) / 1000;
+            } else {
+                // 正常情况：工作时间不跨过午夜
+                const workStartToday = new Date();
+                workStartToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const breakStartToday = new Date();
+                breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                
+                actualWorkedSeconds = (breakStartToday - workStartToday) / 1000;
+            }
+            
+            // 计算到目前为止应该获得的收益
+            const currentEarnings = actualWorkedSeconds * earningsPerSecond;
+            
+            // 确保收益不会超过日薪
+            accumulatedEarnings = Math.min(currentEarnings, dailySalary);
+            
+            document.getElementById('current-earnings').textContent = accumulatedEarnings.toFixed(2) + ' 元';
+            document.getElementById('earnings-status').textContent = '休息中...';
+            
+            // 更新休息状态标志
+            isOnBreak = true;
+            
+            // 保存收益数据到本地存储
+            saveEarningsToStorage();
+        } else {
+            // 不在工作时间，保持当前累计收益不变，更新状态
+            document.getElementById('current-earnings').textContent = accumulatedEarnings.toFixed(2) + ' 元';
+            document.getElementById('earnings-status').textContent = '当前未在工作时间内';
+            
+            // 更新休息状态标志
+            isOnBreak = false;
+        }
+    }
+    
+    // 显示提示信息函数
+    function showToast(message, type = 'success') {
+        const toastElement = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const toastBody = toastElement.querySelector('.toast-body');
+        
+        // 更新消息内容和样式
+        toastMessage.textContent = message;
+        toastBody.className = `toast-body ${type === 'success' ? 'bg-success' : 'bg-danger'} text-white text-center`;
+        
+        // 显示toast
+        toastElement.style.display = 'block';
+        setTimeout(() => {
+            toastElement.style.display = 'none';
+        }, 1000); // 1秒后自动关闭
+    }
+    
+    // 验证工作详情设置的合理性
+    function validateWorkTimeSettings() {
+        const workStartTime = document.getElementById('work_start_time').value;
+        const workEndTime = document.getElementById('work_end_time').value;
+        const breakStartTime = document.getElementById('break_start_time').value;
+        const breakEndTime = document.getElementById('break_end_time').value;
+        const dailySalary = document.getElementById('daily_salary').value;
+        
+        // 检查必要字段是否填写
+        if (!workStartTime || !workEndTime) {
+            showToast('请填写工作开始时间和结束时间', 'error');
+            return false;
+        }
+        
+        if (!dailySalary || dailySalary <= 0) {
+            showToast('请填写正确的日薪', 'error');
+            return false;
+        }
+        
+        // 检查工作开始时间是否早于工作结束时间
+        const workStart = workStartTime.split(':').map(Number);
+        const workEnd = workEndTime.split(':').map(Number);
+        let workStartMinutes = workStart[0] * 60 + workStart[1];
+        let workEndMinutes = workEnd[0] * 60 + workEnd[1];
+        
+        // 如果工作时间跨午夜，调整计算方式
+        if (workStartMinutes > workEndMinutes) {
+            workEndMinutes += 24 * 60; // 加上一天的分钟数
+        }
+        
+        // 检查工作时间是否合理（至少1小时）
+        let workDuration = workEndMinutes - workStartMinutes;
+        if (workDuration < 60) {
+            showToast('工作时间至少应为1小时', 'error');
+            return false;
+        }
+        
+        // 如果填写了休息时间，检查休息时间的合理性
+        if (breakStartTime && breakEndTime) {
+            const breakStart = breakStartTime.split(':').map(Number);
+            const breakEnd = breakEndTime.split(':').map(Number);
+            let breakStartMinutes = breakStart[0] * 60 + breakStart[1];
+            let breakEndMinutes = breakEnd[0] * 60 + breakEnd[1];
+            
+            // 检查休息开始时间是否早于休息结束时间
+            if (breakStartMinutes >= breakEndMinutes) {
+                // 如果休息时间跨午夜，调整计算方式
+                breakEndMinutes += 24 * 60; // 加上一天的分钟数
+                if (breakStartMinutes >= breakEndMinutes) {
+                    showToast('休息开始时间必须早于休息结束时间', 'error');
+                    return false;
+                }
+            }
+            
+            // 检查休息时间是否在工作时间内
+            let isBreakWithinWorkTime = false;
+            
+            // 如果工作时间跨午夜，需要特殊处理
+            if (workStart[0] * 60 + workStart[1] > workEnd[0] * 60 + workEnd[1]) {
+                // 工作时间跨午夜的情况
+                // 休息开始时间必须在工作开始时间之后，休息结束时间必须在工作结束时间之前
+                // 由于时间跨午夜，我们需要分别处理两天的时间
+                if (breakStartMinutes >= workStartMinutes && breakEndMinutes <= workEndMinutes + 24 * 60) {
+                    isBreakWithinWorkTime = true;
+                }
+            } else {
+                // 正常情况：工作时间不跨午夜
+                if (breakStartMinutes >= workStartMinutes && breakEndMinutes <= workEndMinutes) {
+                    isBreakWithinWorkTime = true;
+                }
+            }
+            
+            if (!isBreakWithinWorkTime) {
+                showToast('休息时间应在工作时间内', 'error');
+                return false;
+            }
+            
+            // 检查休息时间是否合理（至少10分钟）
+            let breakDuration = breakEndMinutes - breakStartMinutes;
+            if (breakDuration < 10) {
+                showToast('休息时间至少应为10分钟', 'error');
+                return false;
+            }
+        } else if (breakStartTime || breakEndTime) {
+            // 如果只填写了休息开始时间或休息结束时间中的一个
+            showToast('请完整填写休息开始时间和结束时间', 'error');
+            return false;
+        }
+        
+        return true;
+    }
+
+    // 保存工作详情设置
+    document.getElementById('work-time-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 验证时间设置的合理性
+        if (!validateWorkTimeSettings()) {
+            return;
+        }
+        
+        const formData = new FormData(this);
+        fetch('/api/user-work-info', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // 更新全局变量
+                userWorkInfo.work_start_time = document.getElementById('work_start_time').value;
+                userWorkInfo.work_end_time = document.getElementById('work_end_time').value;
+                userWorkInfo.break_start_time = document.getElementById('break_start_time').value;
+                userWorkInfo.break_end_time = document.getElementById('break_end_time').value;
+                userWorkInfo.daily_salary = parseFloat(document.getElementById('daily_salary').value);
+                
+                // 更新最后设置
+                lastSettings.work_start_time = userWorkInfo.work_start_time;
+                lastSettings.work_end_time = userWorkInfo.work_end_time;
+                lastSettings.daily_salary = userWorkInfo.daily_salary;
+                
+                // 重置收益计算，使用新的设置
+                accumulatedEarnings = 0;
+                saveEarningsToStorage();
+                
+                showToast('设置已保存');
+                
+                // 保存设置后立即更新收益计算
+                updateEarnings();
+            } else {
+                showToast('保存失败', 'error');
+            }
+        });
+    });
+    
+    // 摸鱼记录表单提交
+    document.getElementById('slacking-record-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取摸鱼时长
+        const slackingDuration = parseInt(document.getElementById('slacking_duration').value);
+        
+        // 计算摸鱼收益
+        let earnings = 0;
+        if (userWorkInfo.work_start_time && userWorkInfo.work_end_time && userWorkInfo.daily_salary) {
+            // 计算总的有效工作时间(秒)
+            let totalWorkDuration = 0;
+            const workStartTime = userWorkInfo.work_start_time;
+            const workEndTime = userWorkInfo.work_end_time;
+            const breakStartTime = userWorkInfo.break_start_time;
+            const breakEndTime = userWorkInfo.break_end_time;
+            const dailySalary = parseFloat(userWorkInfo.daily_salary);
+            
+            // 如果工作时间跨过午夜
+            if (workStartTime > workEndTime) {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endTomorrow = new Date();
+                endTomorrow.setDate(endTomorrow.getDate() + 1);
+                endTomorrow.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endTomorrow - startToday) / 1000;
+            } else {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endToday = new Date();
+                endToday.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endToday - startToday) / 1000;
+            }
+            
+            // 减去休息时间
+            if (breakStartTime && breakEndTime) {
+                let breakDuration = 0;
+                
+                // 如果休息时间也跨过午夜
+                if (breakStartTime > breakEndTime) {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndTomorrow = new Date();
+                    breakEndTomorrow.setDate(breakEndTomorrow.getDate() + 1);
+                    breakEndTomorrow.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndTomorrow - breakStartToday) / 1000;
+                } else {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndToday = new Date();
+                    breakEndToday.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndToday - breakStartToday) / 1000;
+                }
+                
+                totalWorkDuration -= breakDuration;
+            }
+            
+            // 计算每秒收益
+            const earningsPerSecond = totalWorkDuration > 0 ? dailySalary / totalWorkDuration : 0;
+            
+            // 计算摸鱼收益（摸鱼时长转换为秒）
+            earnings = earningsPerSecond * slackingDuration * 60;
+        }
+        
+        // 将收益添加到表单数据中
+        const formData = new FormData(this);
+        formData.append('earnings', earnings.toFixed(2));
+        
+        fetch('/api/slacking-records', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                showToast('摸鱼记录已保存，收益：' + earnings.toFixed(2) + '元');
+                this.reset();
+                // 重置收益数据
+                resetEarnings();
+                // 更新页面显示
+                document.getElementById('current-earnings').textContent = '0.00 元';
+            } else {
+                showToast('保存失败: ' + data.error, 'error');
+            }
+        });
+    });
+    
+    // 加班记录表单提交
+    document.getElementById('overtime-record-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取加班时长
+        const overtimeDuration = parseInt(document.getElementById('overtime_duration').value);
+        
+        // 计算加班负收益
+        let earnings = 0;
+        if (userWorkInfo.work_start_time && userWorkInfo.work_end_time && userWorkInfo.daily_salary) {
+            // 计算总的有效工作时间(秒)
+            let totalWorkDuration = 0;
+            const workStartTime = userWorkInfo.work_start_time;
+            const workEndTime = userWorkInfo.work_end_time;
+            const breakStartTime = userWorkInfo.break_start_time;
+            const breakEndTime = userWorkInfo.break_end_time;
+            const dailySalary = parseFloat(userWorkInfo.daily_salary);
+            
+            // 如果工作时间跨过午夜
+            if (workStartTime > workEndTime) {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endTomorrow = new Date();
+                endTomorrow.setDate(endTomorrow.getDate() + 1);
+                endTomorrow.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endTomorrow - startToday) / 1000;
+            } else {
+                const startToday = new Date();
+                startToday.setHours(parseInt(workStartTime.split(':')[0]), parseInt(workStartTime.split(':')[1]), 0, 0);
+                
+                const endToday = new Date();
+                endToday.setHours(parseInt(workEndTime.split(':')[0]), parseInt(workEndTime.split(':')[1]), 0, 0);
+                
+                totalWorkDuration = (endToday - startToday) / 1000;
+            }
+            
+            // 减去休息时间
+            if (breakStartTime && breakEndTime) {
+                let breakDuration = 0;
+                
+                // 如果休息时间也跨过午夜
+                if (breakStartTime > breakEndTime) {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndTomorrow = new Date();
+                    breakEndTomorrow.setDate(breakEndTomorrow.getDate() + 1);
+                    breakEndTomorrow.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndTomorrow - breakStartToday) / 1000;
+                } else {
+                    const breakStartToday = new Date();
+                    breakStartToday.setHours(parseInt(breakStartTime.split(':')[0]), parseInt(breakStartTime.split(':')[1]), 0, 0);
+                    
+                    const breakEndToday = new Date();
+                    breakEndToday.setHours(parseInt(breakEndTime.split(':')[0]), parseInt(breakEndTime.split(':')[1]), 0, 0);
+                    
+                    breakDuration = (breakEndToday - breakStartToday) / 1000;
+                }
+                
+                totalWorkDuration -= breakDuration;
+            }
+            
+            // 计算每秒收益
+            const earningsPerSecond = totalWorkDuration > 0 ? dailySalary / totalWorkDuration : 0;
+            
+            // 计算加班负收益（加班时长转换为秒）
+            earnings = earningsPerSecond * overtimeDuration * 60 * 3;
+        }
+        
+        // 将收益添加到表单数据中
+        const formData = new FormData(this);
+        formData.append('earnings', earnings.toFixed(2));
+        
+        fetch('/api/overtime-records', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                showToast('加班记录已保存，负收益：' + earnings.toFixed(2) + '元');
+                this.reset();
+                // 重置收益数据
+                resetEarnings();
+                // 更新页面显示
+                document.getElementById('current-earnings').textContent = '0.00 元';
+            } else {
+                showToast('保存失败: ' + data.error, 'error');
+            }
+        });
+    });
+</script>
+{% endblock %}

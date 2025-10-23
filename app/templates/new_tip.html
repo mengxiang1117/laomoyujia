@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">分享新技巧</h2>
+        
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label for="title" class="form-label">技巧标题</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            <div class="mb-3">
+                <label for="steps" class="form-label">摸鱼步骤</label>
+                <textarea class="form-control" id="steps" name="steps" rows="5" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="notice" class="form-label">注意事项</label>
+                <textarea class="form-control" id="notice" name="notice" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="experience" class="form-label">经验分享</label>
+                <textarea class="form-control" id="experience" name="experience" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">发布</button>
+            <a href="/tips" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

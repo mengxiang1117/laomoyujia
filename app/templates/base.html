@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFLOW - 摸鱼网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">IFLOW</a>
+            {% if session.user_id %}
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">摸鱼设置</a>
+                <a class="nav-link" href="/tips">摸鱼技巧</a>
+                <a class="nav-link" href="/ranking">排行榜</a>
+                <a class="nav-link" href="/profile">个人中心</a>
+                <a class="nav-link" href="/feedback">意见反馈</a>
+                <a class="nav-link" href="/logout">退出</a>
+            </div>
+            {% else %}
+            <div class="navbar-nav ms-auto">
+                <a></a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

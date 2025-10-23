@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">编辑个人信息</h2>
+        
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label for="gender" class="form-label">性别</label>
+                <select class="form-select" id="gender" name="gender">
+                    <option value="">请选择</option>
+                    <option value="男" {% if user_info[0] == '男' %}selected{% endif %}>男</option>
+                    <option value="女" {% if user_info[0] == '女' %}selected{% endif %}>女</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="age" class="form-label">年龄</label>
+                <input type="number" class="form-control" id="age" name="age" value="{{ user_info[1] or '' }}">
+            </div>
+            <div class="mb-3">
+                <label for="job" class="form-label">工作</label>
+                <input type="text" class="form-control" id="job" name="job" value="{{ user_info[2] or '' }}">
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">邮箱</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ user_info[3] or '' }}">
+            </div>
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="/profile" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

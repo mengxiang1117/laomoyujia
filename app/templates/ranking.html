@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4">排行榜</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-white" style="background-color: #f81e06;">
+                        <h4 class="mb-0">摸鱼红榜 (Top 10)</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if red_ranking %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用户名</th>
+                                        <th>摸鱼收益</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in red_ranking %}
+                                    <tr>
+                                        <td>
+                                            {% if loop.index == 1 %}
+                                            <span class="badge bg-warning">🥇</span>
+                                            {% elif loop.index == 2 %}
+                                            <span class="badge bg-secondary">🥈</span>
+                                            {% elif loop.index == 3 %}
+                                            <span class="badge bg-danger">🥉</span>
+                                            {% else %}
+                                            {{ loop.index }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item[0] }}</td>
+                                        <td>{{ "%.2f"|format(item[1] or 0) }} 元</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">暂无数据</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-white" style="background-color: #0e0d0d;">
+                        <h4 class="mb-0">加班黑榜 (Top 10)</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if black_ranking %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用户名</th>
+                                        <th>加班负收益</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in black_ranking %}
+                                    <tr>
+                                        <td>
+                                            {% if loop.index == 1 %}
+                                            <span class="badge bg-warning">🥇</span>
+                                            {% elif loop.index == 2 %}
+                                            <span class="badge bg-secondary">🥈</span>
+                                            {% elif loop.index == 3 %}
+                                            <span class="badge bg-danger">🥉</span>
+                                            {% else %}
+                                            {{ loop.index }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item[0] }}</td>
+                                        <td>{{ "%.2f"|format(item[1] or 0) }} 元</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">暂无数据</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

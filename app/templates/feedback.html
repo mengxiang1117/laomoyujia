@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4">意见反馈</h2>
+        
+        <div class="mb-3 text-end">
+            <a href="/feedback/new" class="btn btn-primary">提交反馈</a>
+        </div>
+        
+        {% if feedbacks %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>反馈内容</th>
+                        <th>回复内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feedback in feedbacks %}
+                    <tr>
+                        <td>{{ feedback[2] }}</td>
+                        <td>{{ feedback[4] if feedback[4] else '暂无回复' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">暂无反馈记录</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

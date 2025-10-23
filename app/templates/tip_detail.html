@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">{{ tip[1] }}</h2>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">作者: {{ tip[6] }} 发布于: {{ tip[5].strftime('%Y-%m-%d %H:%M') if tip[5] else '' }}</small>
+                    </div>
+                    <div>
+                        <button id="like-btn" class="btn btn-sm btn-outline-primary" data-tip-id="{{ tip[0] }}">
+                            <span id="like-icon">👍</span>
+                            <span id="like-count">{{ tip[7] }}</span>
+                        </button>
+                        {% if session.user_id == tip[0] %}
+                        <a href="/tips/{{ tip[0] }}/edit" class="btn btn-sm btn-outline-secondary">编辑</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5>摸鱼步骤</h5>
+                <p>{{ tip[2] }}</p>
+                
+                <h5>注意事项</h5>
+                <p>{{ tip[3] or '无' }}</p>
+                
+                <h5>经验分享</h5>
+                <p>{{ tip[4] or '无' }}</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>评论</h5>
+            </div>
+            <div class="card-body">
+                <div id="comments">
+                    {% for comment in comments %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ comment[2] }}</strong>
+                            <small class="text-muted">{{ comment[1].strftime('%Y-%m-%d %H:%M') if comment[1] else '' }}</small>
+                        </div>
+                        <p class="mb-0">{{ comment[0] }}</p>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if not comments %}
+                    <p>暂无评论</p>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <h5>发表评论</h5>
+                <form id="comment-form" data-tip-id="{{ tip[0] }}">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="comment-content" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">提交评论</button>
+                </form>
+            </div>
+        </div>
+        
+        <a href="/tips" class="btn btn-secondary">返回技巧列表</a>
+    </div>
+</div>
+
+<!-- 评论成功提示 -->
+<div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
+    <div id="commentSuccessToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-body bg-success text-white text-center">
+            评论成功
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 点赞功能
+    document.getElementById('like-btn').addEventListener('click', function() {
+        const tipId = this.getAttribute('data-tip-id');
+        
+        fetch(`/tips/${tipId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('like-count').textContent = data.like_count;
+                const likeIcon = document.getElementById('like-icon');
+                if(data.liked) {
+                    likeIcon.textContent = '👍';
+                } else {
+                    likeIcon.textContent = '👍';
+                }
+            } else {
+                alert(data.error || '操作失败');
+            }
+        });
+    });
+    
+    // 评论功能
+    document.getElementById('comment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const tipId = this.getAttribute('data-tip-id');
+        const content = document.getElementById('comment-content').value;
+        
+        const formData = new FormData();
+        formData.append('content', content);
+        
+        fetch(`/tips/${tipId}/comment`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // 显示评论成功提示
+                var toastEl = document.getElementById('commentSuccessToast');
+                var toast = new bootstrap.Toast(toastEl, {
+                    delay: 500 // 0.5秒后自动消失
+                });
+                toast.show();
+                
+                // 0.5秒后刷新页面
+                setTimeout(function() {
+                    location.reload();
+                }, 500);
+            } else {
+                alert(data.error || '评论失败');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

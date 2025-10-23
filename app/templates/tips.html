@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">摸鱼技巧分享</h2>
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <a href="/tips/new" class="btn btn-primary">分享新技巧</a>
+            </div>
+            <div>
+                <label for="sort-select" class="me-2">排序:</label>
+                <select id="sort-select" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                    <option value="time" {% if sort_by == 'time' or not sort_by %}selected{% endif %}>按发布时间</option>
+                    <option value="likes" {% if sort_by == 'likes' %}selected{% endif %}>按点赞数</option>
+                    <option value="comments" {% if sort_by == 'comments' %}selected{% endif %}>按评论数</option>
+                </select>
+            </div>
+        </div>
+        
+        {% for tip in tips %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><a href="/tips/{{ tip[0] }}" class="text-decoration-none">{{ tip[1] }}</a></h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">作者: {{ tip[6] }} 发布于: {{ tip[5].strftime('%Y-%m-%d %H:%M') if tip[5] else '' }}</small>
+                    <div>
+                        <a href="/tips/{{ tip[0] }}" class="btn btn-sm btn-outline-info">查看详情</a>
+                        <button class="btn btn-sm btn-outline-primary like-btn" data-tip-id="{{ tip[0] }}">
+                            <span class="like-icon">👍</span>
+                            <span class="like-count">{{ tip[7] }}</span>
+                        </button>
+                        <span class="badge bg-secondary">{{ tip[8] }} 评论</span>
+                    </div>
+                </div>
+                <!-- 评论功能已移至详情页面 -->
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not tips %}
+        <div class="alert alert-info">暂无摸鱼技巧分享</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 排序功能
+    const sortSelect = document.getElementById('sort-select');
+    sortSelect.addEventListener('change', function() {
+        const sortBy = this.value;
+        // 重新加载页面并传递排序参数
+        window.location.href = `/tips?sort=${sortBy}`;
+    });
+    
+    // 点赞功能
+    document.querySelectorAll('.like-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const tipId = this.getAttribute('data-tip-id');
+            
+            fetch(`/tips/${tipId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    this.querySelector('.like-count').textContent = data.like_count;
+                    const likeIcon = this.querySelector('.like-icon');
+                    if(data.liked) {
+                        likeIcon.textContent = '👍';
+                    } else {
+                        likeIcon.textContent = '👍';
+                    }
+                } else {
+                    alert(data.error || '操作失败');
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
