@@ -53,6 +53,7 @@
 - 后端：Python + Flask框架
 - 前端：HTML/CSS/JavaScript
 - 缓存：Redis
+- 数据库：[supabase](https://supabase.com/)
 - 在应用初始化文件中添加了Redis连接，为以下功能添加了缓存支持：
   - 实时收益计算（前后端同步）
   - 排行榜数据（缓存5分钟）
@@ -89,14 +90,15 @@
    ```
    pip install -r requirements.txt
    ```
-3. 配置数据库连接信息（在.env文件中）
+3. 配置数据库连接信息（在.env文件中）cp env.example .env
 4. 创建数据库表（运行sql_connect.py）
-5. 启动Redis服务
-6. 运行应用：
+5. 优化数据库性能，建立索引（运行optimize_db.py）
+6. 启动Redis服务
+7. 运行应用：
    ```
    python run.py
    ```
-7. 优化数据库性能（可选，运行optimize_db.py）
+   终端访问http://127.0.0.1:5000/
 
 ## 环境变量配置
 
